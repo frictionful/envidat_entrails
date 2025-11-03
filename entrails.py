@@ -69,8 +69,8 @@ except Exception as e:
 DEFAULT_BUCKETS = [
     "https://os.zhdk.cloud.switch.ch/envidat-doi/",
     "https://os.zhdk.cloud.switch.ch/envicloud/",
-    "https://os.zhdk.cloud.switch.ch/chelsav1/",
-    "https://os.zhdk.cloud.switch.ch/chelsav2/",
+    #"https://os.zhdk.cloud.switch.ch/chelsav1/",
+    #"https://os.zhdk.cloud.switch.ch/chelsav2/",
     "https://s3-zh.os.switch.ch/pointclouds",
     "https://s3-zh.os.switch.ch/drone-data",
     "https://os.zhdk.cloud.switch.ch/edna/",
@@ -118,24 +118,15 @@ def _safe_find_text(elem, tag):
 def list_s3_bucket_to_csv(bucket_url: str, csv_writer: csv.DictWriter, session: requests.Session, sleep: float = 0.0, max_pages: Optional[int] = None):
     """
     Crawl a single S3-style bucket listing endpoint and write rows to csv_writer.
-
-    Parameters
-    ----------
-    bucket_url : str
-        The root URL that returns S3 ListBucketResult XML (e.g. https://.../)
-    csv_writer : csv.DictWriter
-        A writer already initialized with CSV_HEADERS.
-    session : requests.Session
-        Session object to allow connection reuse.
-    sleep : float
-        Seconds to sleep between page requests to be polite.
-    max_pages : Optional[int]
-        If set, limit the number of pages fetched (useful for testing).
     """
     logger.info("Starting bucket: %s", bucket_url)
     bucket_name = bucket_url.rstrip('/').split('/')[-1]
     marker: Optional[str] = None
     page_count = 0
+
+    # Counters for skipped rows (for informative logging)
+    skipped_envidat1 = 0      # count of keys skipped because they contain 'envidat.1'
+    skipped_doi_meta = 0      # count of keys skipped from the envidat-doi bucket for certain extensions
 
     while True:
         # Build URL and params. S3 ListObjects v1 uses 'marker' for pagination.
@@ -174,6 +165,24 @@ def list_s3_bucket_to_csv(bucket_url: str, csv_writer: csv.DictWriter, session: 
             owner_id = _safe_find_text(owner, 'ID') if owner is not None else ''
             owner_display = _safe_find_text(owner, 'DisplayName') if owner is not None else ''
             type_ = _safe_find_text(content, 'Type')
+
+            # ----- Begin filtering rules -----
+            # Normalize for case-insensitive checking
+            lower_key = key.lower() if isinstance(key, str) else ''
+
+            # Rule 1: Exclude any key that contains 'envidat.1' anywhere (special DOI datasets)
+            if 'envidat.1' in lower_key:
+                skipped_envidat1 += 1
+                continue
+
+            # Rule 2: For the envidat-doi bucket, exclude .html, .json, and .xml files
+            if bucket_name == 'envidat-doi':
+                _, ext = os.path.splitext(key if key is not None else '')
+                ext = ext.lower()
+                if ext in ('.html', '.json', '.xml'):
+                    skipped_doi_meta += 1
+                    continue
+            # ----- End filtering rules -----
 
             csv_writer.writerow({
                 'bucket_url': bucket_url,
@@ -218,7 +227,14 @@ def list_s3_bucket_to_csv(bucket_url: str, csv_writer: csv.DictWriter, session: 
         if sleep and sleep > 0:
             time.sleep(sleep)
 
+    # Log skipped counts so the user knows what's been excluded
+    if skipped_envidat1:
+        logger.info("Skipped %d objects containing 'envidat.1' in their path for bucket %s", skipped_envidat1, bucket_name)
+    if skipped_doi_meta:
+        logger.info("Skipped %d metadata files (.html/.json/.xml) in envidat-doi bucket %s", skipped_doi_meta, bucket_name)
+
     logger.info('Finished bucket: %s (pages fetched=%d)', bucket_url, page_count)
+
 
 
 # ----- Command: fetch (create the CSV) -----
