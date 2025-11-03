@@ -1,7 +1,7 @@
 
 # EnviDat Entrails for Exploring & Visualizing the data types on Envidat
 
-This toolkit does three main things:
+This script does three main things:
 
 1. **Downloads metadata listings** from several S3-compatible endpoints.  
 2. **Aggregates file details** (like name, extension, and size) into a unified CSV (`all_s3_files.csv`).  
@@ -12,7 +12,7 @@ You’ll get:
 - Sunburst charts showing bucket and extension hierarchies (also by count *and* by size)
 - A CSV summary for further analysis
 
-## The Buckets (can be added to later)
+## Buckets Analyzed
 
 These are the five S3 endpoints we’re working with:
 
@@ -23,6 +23,7 @@ These are the five S3 endpoints we’re working with:
 | `chelsav1` | CHELSA climate dataset (v1) |
 | `chelsav2` | CHELSA climate dataset (v2) |
 | `edna` | Elevation-derived hydrological data |
+| `others` | We can add other S3 buckets later |
 
 Each bucket is public on the SWITCH Cloud (`https://os.zhdk.cloud.switch.ch/<bucket-name>/`).
 
