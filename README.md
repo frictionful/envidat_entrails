@@ -1,4 +1,3 @@
-
 # EnviDat Entrails for Exploring & Visualizing the data types on Envidat
 
 This script does three main things:
@@ -20,13 +19,30 @@ These are the five S3 endpoints we’re working with:
 |--------|--------------|
 | `envidat-doi` | Published EnviDat datasets with DOIs |
 | `envicloud` | Internal EnviDat staging and mirrored datasets |
+| `edna` | Elevation-derived hydrological data |
+| `pointclouds` | drone-derived pointclouds |
+| `drone-data` | drone-derived image data |
+
+These are two buckets that were excluded becuase of their size (see filtering below for details).
+
+| Bucket | Description |
+|--------|--------------|
 | `chelsav1` | CHELSA climate dataset (v1) |
 | `chelsav2` | CHELSA climate dataset (v2) |
-| `edna` | Elevation-derived hydrological data |
-| `others` | We can add other S3 buckets later |
 
 Each bucket is public on the SWITCH Cloud (`https://os.zhdk.cloud.switch.ch/<bucket-name>/`).
 
+## Filtering
+To keep the visualizations meaningful, two filtering rules were added to the **fetch** step (this is the default, production-ready behavior):
+
+1. **Exclude any path that contains `envidat.1` (case-insensitive).**
+   Rationale: `envidat.1` denotes certain DOI datasets that contain large numbers of `.raw` and other files and skew the distribution. Example excluded key:
+   `10.16904_envidat.1/180f906a-5fc8-4a7e-b9f7-ab00f7092d79_04-GITS.html`
+
+2. **In the `envidat-doi` bucket only, exclude `.html`, `.json`, and `.xml` files.**
+   Rationale: These are machine-oriented metadata files (created for machine-to-machine interoperability) and we prefer to exclude them from the dataset-level content analysis so they don’t dominate counts.
+
+These rules are applied **while fetching** the S3 listings (i.e., excluded rows never get written to the CSV). This keeps the CSV smaller and the analysis honest.
 
 ## Script Overview
 
@@ -41,6 +57,18 @@ python3 entrails.py visualize --csv all_s3_files.csv --out-prefix envidat_viz
 
 #or do both
 python envidat_filetype_tool.py run-all --out all_s3_files.csv --out-prefix envidat_viz
+```
+
+## What you’ll see in the logs
+
+After running the fetch step you should see informative logs indicating how many items were skipped. Example:
+
+```
+2025-10-23 10:05:12,123 INFO: Got 1000 Contents entries (page 1)
+...
+2025-10-23 10:12:43,456 INFO: Skipped 2345 objects containing 'envidat.1' in their path for bucket envidat-doi
+2025-10-23 10:12:43,456 INFO: Skipped 412 metadata files (.html/.json/.xml) in envidat-doi bucket envidat-doi
+2025-10-23 10:12:43,457 INFO: Finished bucket: https://os.zhdk.cloud.switch.ch/envidat-doi/ (pages fetched=27)
 ```
 
 **Outputs:**
