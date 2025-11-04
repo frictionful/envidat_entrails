@@ -69,8 +69,8 @@ except Exception as e:
 DEFAULT_BUCKETS = [
     "https://os.zhdk.cloud.switch.ch/envidat-doi/",
     "https://os.zhdk.cloud.switch.ch/envicloud/",
-    #"https://os.zhdk.cloud.switch.ch/chelsav1/",
-    #"https://os.zhdk.cloud.switch.ch/chelsav2/",
+    "https://os.zhdk.cloud.switch.ch/chelsav1/",
+    "https://os.zhdk.cloud.switch.ch/chelsav2/",
     "https://s3-zh.os.switch.ch/pointclouds",
     "https://s3-zh.os.switch.ch/drone-data",
     "https://os.zhdk.cloud.switch.ch/edna/",
@@ -112,7 +112,6 @@ def _safe_find_text(elem, tag):
     child = elem.find(tag)
     return child.text if child is not None else ''
 
-
 # ----- Core: fetch/list S3-style bucket pages -----
 
 def list_s3_bucket_to_csv(bucket_url: str, csv_writer: csv.DictWriter, session: requests.Session, sleep: float = 0.0, max_pages: Optional[int] = None):
@@ -124,7 +123,7 @@ def list_s3_bucket_to_csv(bucket_url: str, csv_writer: csv.DictWriter, session: 
     marker: Optional[str] = None
     page_count = 0
 
-    # Counters for skipped rows (for informative logging)
+    # Counters for skipped rows (for informative logging of what we are weeding out following IIE's comment)
     skipped_envidat1 = 0      # count of keys skipped because they contain 'envidat.1'
     skipped_doi_meta = 0      # count of keys skipped from the envidat-doi bucket for certain extensions
 
@@ -234,8 +233,6 @@ def list_s3_bucket_to_csv(bucket_url: str, csv_writer: csv.DictWriter, session: 
         logger.info("Skipped %d metadata files (.html/.json/.xml) in envidat-doi bucket %s", skipped_doi_meta, bucket_name)
 
     logger.info('Finished bucket: %s (pages fetched=%d)', bucket_url, page_count)
-
-
 
 # ----- Command: fetch (create the CSV) -----
 
@@ -458,11 +455,6 @@ def cmd_visualize(csv_path, out_prefix='envidat_viz', top_n_extensions: Optional
     sunburst_bytes_out = f"{out_prefix}_sunburst_size.html"
     sunburst_bytes_fig.write_html(sunburst_bytes_out)
     logger.info('Sunburst (by bytes) written to %s', sunburst_bytes_out)
-
-
-
-
-
 
 # ----- CLI wiring -----
 
